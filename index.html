@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RouteRX — Mobile Clinic Route Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --teal-50: #E1F5EE;
+    --teal-100: #9FE1CB;
+    --teal-400: #1D9E75;
+    --teal-600: #0F6E56;
+    --teal-800: #085041;
+    --teal-900: #04342C;
+    --slate-50: #F7F8F9;
+    --slate-100: #ECEEF1;
+    --slate-200: #D5D9DF;
+    --slate-400: #8A929E;
+    --slate-600: #4A5260;
+    --slate-800: #1E2430;
+    --white: #ffffff;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--slate-50);
+    color: var(--slate-800);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem; color: var(--teal-600);
+    text-decoration: none;
+  }
+  .nav-logo-mark {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    background: var(--teal-600);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    text-decoration: none; color: var(--slate-600);
+    font-size: 0.9rem; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--teal-600); }
+  .nav-cta {
+    background: var(--teal-600); color: white;
+    border: none; border-radius: var(--radius-sm);
+    padding: 0.5rem 1.25rem; font-size: 0.875rem;
+    font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .nav-cta:hover { background: var(--teal-800); }
+
+  /* HERO */
+  .hero {
+    padding: 6rem 2rem 4rem;
+    max-width: 1100px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+    align-items: center;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--teal-50); color: var(--teal-600);
+    border: 1px solid var(--teal-100);
+    border-radius: 100px; padding: 4px 14px;
+    font-size: 0.8rem; font-weight: 500;
+    margin-bottom: 1.25rem;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--teal-400);
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3.2rem; line-height: 1.15;
+    color: var(--slate-800); margin-bottom: 1.25rem;
+  }
+  .hero h1 em {
+    font-style: italic; color: var(--teal-600);
+  }
+  .hero p {
+    font-size: 1.05rem; color: var(--slate-600);
+    line-height: 1.75; margin-bottom: 2rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; align-items: center; }
+  .btn-primary {
+    background: var(--teal-600); color: white;
+    border: none; border-radius: var(--radius-sm);
+    padding: 0.75rem 1.75rem; font-size: 0.95rem;
+    font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--teal-800); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent; color: var(--slate-600);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1.5rem; font-size: 0.95rem;
+    font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--teal-400); color: var(--teal-600); }
+
+  /* HERO STATS CARD */
+  .hero-visual {
+    background: white;
+    border: 1px solid var(--slate-100);
+    border-radius: var(--radius-xl);
+    padding: 1.75rem;
+    box-shadow: 0 4px 24px rgba(15,110,86,0.08);
+  }
+  .hero-visual-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .hero-visual-header span {
+    font-size: 0.85rem; font-weight: 500; color: var(--slate-600);
+  }
+  .status-pill {
+    background: var(--teal-50); color: var(--teal-600);
+    border: 1px solid var(--teal-100);
+    border-radius: 100px; padding: 3px 10px;
+    font-size: 0.75rem; font-weight: 500;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .stat-box {
+    background: var(--slate-50); border-radius: var(--radius-md);
+    padding: 1rem; text-align: center;
+  }
+  .stat-box .val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem; color: var(--teal-600);
+    display: block; line-height: 1.2;
+  }
+  .stat-box .lbl {
+    font-size: 0.75rem; color: var(--slate-400);
+    margin-top: 2px; display: block;
+  }
+  .route-preview {
+    background: var(--slate-50); border-radius: var(--radius-md);
+    padding: 1rem; display: flex; flex-direction: column; gap: 8px;
+  }
+  .route-stop {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.85rem;
+  }
+  .stop-dot {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 600;
+  }
+  .stop-dot.start { background: var(--teal-50); color: var(--teal-600); }
+  .stop-dot.mid { background: var(--slate-100); color: var(--slate-600); }
+  .stop-dot.end { background: #FFF3CD; color: #856404; }
+  .stop-info { flex: 1; }
+  .stop-zip { font-weight: 500; color: var(--slate-800); }
+  .stop-meta { font-size: 0.75rem; color: var(--slate-400); }
+  .stop-score {
+    font-size: 0.75rem; font-weight: 600;
+    color: var(--teal-600); background: var(--teal-50);
+    padding: 2px 8px; border-radius: 100px;
+  }
+  .route-connector {
+    width: 1px; height: 12px; background: var(--slate-200);
+    margin-left: 13px;
+  }
+
+  /* FEATURES */
+  .features {
+    padding: 5rem 2rem;
+    background: white;
+    border-top: 1px solid var(--slate-100);
+    border-bottom: 1px solid var(--slate-100);
+  }
+  .features-inner { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--teal-400);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.25rem; color: var(--slate-800);
+    margin-bottom: 0.75rem;
+  }
+  .section-sub {
+    font-size: 1rem; color: var(--slate-400);
+    max-width: 520px; margin-bottom: 3rem;
+  }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+  }
+  .feature-card {
+    border: 1px solid var(--slate-100);
+    border-radius: var(--radius-lg); padding: 1.5rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .feature-card:hover {
+    border-color: var(--teal-100);
+    box-shadow: 0 4px 20px rgba(15,110,86,0.06);
+  }
+  .feature-icon {
+    width: 40px; height: 40px; border-radius: var(--radius-sm);
+    background: var(--teal-50); color: var(--teal-600);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; margin-bottom: 1rem;
+  }
+  .feature-card h3 {
+    font-size: 1rem; font-weight: 600; color: var(--slate-800);
+    margin-bottom: 0.5rem;
+  }
+  .feature-card p { font-size: 0.9rem; color: var(--slate-400); line-height: 1.6; }
+
+  /* HOW IT WORKS */
+  .how-it-works { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 3rem; }
+  .step {
+    position: relative;
+    text-align: center; padding: 1.5rem 1rem;
+  }
+  .step-num {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--teal-600); color: white;
+    font-size: 0.9rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+  }
+  .step h4 { font-size: 0.95rem; font-weight: 600; color: var(--slate-800); margin-bottom: 0.5rem; }
+  .step p { font-size: 0.85rem; color: var(--slate-400); line-height: 1.6; }
+  .step-line {
+    position: absolute; top: 36px; left: calc(50% + 20px);
+    width: calc(100% - 40px); height: 1px;
+    background: var(--slate-200);
+  }
+
+  /* CTA BANNER */
+  .cta-banner {
+    margin: 0 2rem 5rem;
+    background: var(--teal-800);
+    border-radius: var(--radius-xl);
+    padding: 3rem 3.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1060px; margin-left: auto; margin-right: auto;
+  }
+  .cta-banner h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.9rem; color: white; margin-bottom: 0.5rem;
+  }
+  .cta-banner p { font-size: 0.95rem; color: var(--teal-100); }
+  .btn-white {
+    background: white; color: var(--teal-800);
+    border: none; border-radius: var(--radius-sm);
+    padding: 0.75rem 1.75rem; font-size: 0.95rem;
+    font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    text-decoration: none; white-space: nowrap;
+    transition: transform 0.2s;
+  }
+  .btn-white:hover { transform: translateY(-2px); }
+
+  /* FOOTER */
+  footer {
+    background: white; border-top: 1px solid var(--slate-100);
+    padding: 2rem; text-align: center;
+    color: var(--slate-400); font-size: 0.85rem;
+  }
+  footer a { color: var(--teal-600); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; padding: 3rem 1.5rem 2rem; }
+    .hero h1 { font-size: 2.4rem; }
+    .hero-visual { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .step-line { display: none; }
+    .cta-banner { flex-direction: column; gap: 1.5rem; text-align: center; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-mark">Rx</div>
+    RouteRX
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="schedule.html">Route Planner</a></li>
+  </ul>
+  <a href="schedule.html" class="nav-cta">Plan a Route →</a>
+</nav>
+
+<main>
+  <section class="hero">
+    <div class="hero-text">
+      <div class="hero-eyebrow">Mobile Clinic Routing · US Coverage</div>
+      <h1>Get your clinic to <em>the right communities</em>, faster</h1>
+      <p>RouteRX automatically selects the highest-need ZIP codes in your region and builds an optimized route — so your team spends less time planning and more time helping.</p>
+      <div class="hero-actions">
+        <a href="schedule.html" class="btn-primary">Generate a Route</a>
+        <a href="#how-it-works" class="btn-ghost">See how it works</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-visual-header">
+        <span>Sample Route — Boston, MA</span>
+        <span class="status-pill">● Live</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <span class="val">6</span>
+          <span class="lbl">Stops</span>
+        </div>
+        <div class="stat-box">
+          <span class="val">42km</span>
+          <span class="lbl">Distance</span>
+        </div>
+        <div class="stat-box">
+          <span class="val">94.2</span>
+          <span class="lbl">Need Score</span>
+        </div>
+      </div>
+      <div class="route-preview">
+        <div class="route-stop">
+          <div class="stop-dot start">S</div>
+          <div class="stop-info">
+            <div class="stop-zip">ZIP 02118 · South End</div>
+            <div class="stop-meta">Starting point</div>
+          </div>
+          <span class="stop-score">Start</span>
+        </div>
+        <div class="route-connector"></div>
+        <div class="route-stop">
+          <div class="stop-dot mid">1</div>
+          <div class="stop-info">
+            <div class="stop-zip">ZIP 02121 · Dorchester</div>
+            <div class="stop-meta">Pop. 38,400 · High need</div>
+          </div>
+          <span class="stop-score">97.1</span>
+        </div>
+        <div class="route-connector"></div>
+        <div class="route-stop">
+          <div class="stop-dot mid">2</div>
+          <div class="stop-info">
+            <div class="stop-zip">ZIP 02124 · Mattapan</div>
+            <div class="stop-meta">Pop. 31,200 · High need</div>
+          </div>
+          <span class="stop-score">94.8</span>
+        </div>
+        <div class="route-connector"></div>
+        <div class="route-stop">
+          <div class="stop-dot end">↩</div>
+          <div class="stop-info">
+            <div class="stop-zip">2 more stops…</div>
+            <div class="stop-meta">View full route</div>
+          </div>
+          <a href="schedule.html" style="font-size:0.75rem; color: var(--teal-600); text-decoration:none;">Plan →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="features-inner">
+      <div class="section-label">What it does</div>
+      <h2 class="section-title">Built for clinic coordinators</h2>
+      <p class="section-sub">No GIS expertise needed. Enter a ZIP code, choose how many stops, and RouteRX handles the rest.</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📍</div>
+          <h3>Need-based stop selection</h3>
+          <p>Automatically identifies the highest-need ZIP codes near your starting point using population and health access data.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🗺️</div>
+          <h3>Optimized routing</h3>
+          <p>Powered by OpenRouteService to calculate the shortest drive path across all your stops — saving fuel and time.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Visual map + route sheet</h3>
+          <p>See your full route on an interactive map alongside a printable table of stops with distance and need scores.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📥</div>
+          <h3>CSV download</h3>
+          <p>Export the full route as a CSV file to share with drivers, volunteers, or import into scheduling tools.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🇺🇸</div>
+          <h3>All 50 states covered</h3>
+          <p>Works for any ZIP code across the continental United States — from dense cities to rural counties.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Results in seconds</h3>
+          <p>No login, no setup. Enter your ZIP, pick your stops, hit generate — your route is ready in under 10 seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-label">Process</div>
+    <h2 class="section-title">How it works</h2>
+    <p class="section-sub">From ZIP code to optimized route in four simple steps.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Enter your starting ZIP</h4>
+        <p>Type in the ZIP code where your clinic vehicle starts the day.</p>
+        <div class="step-line"></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Choose number of stops</h4>
+        <p>Pick how many communities you want to visit — up to 10 stops per route.</p>
+        <div class="step-line"></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>We rank the best ZIPs</h4>
+        <p>RouteRX finds nearby ZIP codes ranked by health access need and population.</p>
+        <div class="step-line"></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Get your route</h4>
+        <p>An optimized map and stop list is returned — ready to print or export.</p>
+      </div>
+    </div>
+  </section>
+
+  <div style="padding: 0 2rem 5rem; max-width: 1100px; margin: 0 auto;">
+    <div class="cta-banner">
+      <div>
+        <h2>Ready to plan today's route?</h2>
+        <p>Start with a ZIP code — your optimized route is 30 seconds away.</p>
+      </div>
+      <a href="schedule.html" class="btn-white">Open Route Planner →</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>© 2026 RouteRX · Built to connect mobile clinics with communities that need them most · <a href="schedule.html">Route Planner</a></p>
+</footer>
+
+</body>
+</html>

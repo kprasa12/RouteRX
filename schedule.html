@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RouteRX — Route Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --teal-50: #E1F5EE;
+    --teal-100: #9FE1CB;
+    --teal-400: #1D9E75;
+    --teal-600: #0F6E56;
+    --teal-800: #085041;
+    --slate-50: #F7F8F9;
+    --slate-100: #ECEEF1;
+    --slate-200: #D5D9DF;
+    --slate-400: #8A929E;
+    --slate-600: #4A5260;
+    --slate-800: #1E2430;
+    --white: #ffffff;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --danger: #E24B4A;
+    --danger-bg: #FCEBEB;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--slate-50);
+    color: var(--slate-800);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 1000;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem; color: var(--teal-600);
+    text-decoration: none;
+  }
+  .nav-logo-mark {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    background: var(--teal-600);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 1rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .nav-back {
+    font-size: 0.875rem; color: var(--slate-400);
+    text-decoration: none; display: flex; align-items: center; gap: 6px;
+    transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--teal-600); }
+
+  /* LAYOUT */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: white;
+    border-right: 1px solid var(--slate-100);
+    padding: 2rem 1.5rem;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 1.5rem;
+  }
+  .sidebar-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem; color: var(--slate-800);
+    margin-bottom: 0.25rem;
+  }
+  .sidebar-sub { font-size: 0.875rem; color: var(--slate-400); }
+
+  /* FORM */
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 0.825rem; font-weight: 500;
+    color: var(--slate-600); letter-spacing: 0.01em;
+  }
+  .form-label span { color: var(--danger); margin-left: 2px; }
+  .form-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem; font-family: 'DM Sans', sans-serif;
+    color: var(--slate-800); background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    appearance: none;
+  }
+  .form-input:focus {
+    border-color: var(--teal-400);
+    box-shadow: 0 0 0 3px rgba(29,158,117,0.12);
+  }
+  .form-input.error { border-color: var(--danger); }
+  .form-hint { font-size: 0.775rem; color: var(--slate-400); }
+  .form-error { font-size: 0.775rem; color: var(--danger); display: none; }
+  .form-error.visible { display: block; }
+
+  .stops-display {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 4px;
+  }
+  .stops-val {
+    font-size: 1.4rem; font-weight: 600; color: var(--teal-600);
+  }
+  input[type="range"] {
+    width: 100%; accent-color: var(--teal-600);
+    height: 4px; cursor: pointer;
+  }
+
+  .divider { height: 1px; background: var(--slate-100); }
+
+  .btn-generate {
+    width: 100%;
+    background: var(--teal-600); color: white;
+    border: none; border-radius: var(--radius-sm);
+    padding: 0.875rem; font-size: 0.95rem;
+    font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-generate:hover:not(:disabled) { background: var(--teal-800); }
+  .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn-generate.loading .spinner { display: block; }
+  .btn-generate.loading .btn-text { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ERROR BOX */
+  .error-box {
+    background: var(--danger-bg);
+    border: 1px solid #F7C1C1;
+    border-radius: var(--radius-sm);
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem; color: #A32D2D;
+    display: none;
+  }
+  .error-box.visible { display: block; }
+
+  /* RESULTS PANEL */
+  .main-panel {
+    display: flex; flex-direction: column;
+    background: var(--slate-50);
+  }
+
+  /* MAP */
+  #map {
+    flex: 1; min-height: 420px;
+    background: var(--slate-100);
+    position: relative;
+  }
+  .map-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px; color: var(--slate-400);
+    font-size: 0.9rem; text-align: center;
+    pointer-events: none;
+  }
+  .map-placeholder-icon { font-size: 2.5rem; }
+
+  /* ROUTE SUMMARY BAR */
+  .summary-bar {
+    background: white; border-top: 1px solid var(--slate-100);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 2rem;
+    display: none;
+  }
+  .summary-bar.visible { display: flex; }
+  .summary-stat { text-align: center; }
+  .summary-stat .val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem; color: var(--teal-600); display: block;
+  }
+  .summary-stat .lbl { font-size: 0.75rem; color: var(--slate-400); }
+  .summary-divider { width: 1px; height: 36px; background: var(--slate-100); }
+  .summary-bar .btn-csv {
+    margin-left: auto;
+    background: white; color: var(--teal-600);
+    border: 1px solid var(--teal-100);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 1.25rem; font-size: 0.85rem;
+    font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .summary-bar .btn-csv:hover { background: var(--teal-50); }
+
+  /* ROUTE TABLE */
+  .route-table-wrap {
+    padding: 1.5rem;
+    display: none;
+    overflow-x: auto;
+  }
+  .route-table-wrap.visible { display: block; }
+  .route-table-wrap h3 {
+    font-size: 0.9rem; font-weight: 600;
+    color: var(--slate-600); margin-bottom: 1rem;
+    text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem;
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    background: white; border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--slate-100);
+    font-size: 0.875rem;
+  }
+  thead { background: var(--slate-50); }
+  th {
+    padding: 0.75rem 1rem; text-align: left;
+    font-size: 0.75rem; font-weight: 600;
+    color: var(--slate-400); letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--slate-100);
+  }
+  td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--slate-100); color: var(--slate-800); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--slate-50); }
+  .badge {
+    display: inline-block; padding: 2px 10px;
+    border-radius: 100px; font-size: 0.75rem; font-weight: 500;
+  }
+  .badge-start { background: var(--teal-50); color: var(--teal-600); }
+  .badge-stop { background: var(--slate-100); color: var(--slate-600); }
+  .need-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .need-track {
+    flex: 1; height: 6px; background: var(--slate-100);
+    border-radius: 3px; overflow: hidden;
+  }
+  .need-fill {
+    height: 100%; background: var(--teal-400);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center; color: var(--slate-400);
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 900px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--slate-100); }
+    #map { min-height: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-mark">Rx</div>
+    RouteRX
+  </a>
+  <a href="index.html" class="nav-back">← Back to home</a>
+</nav>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR FORM -->
+  <aside class="sidebar">
+    <div>
+      <h1 class="sidebar-title">Route Planner</h1>
+      <p class="sidebar-sub">Enter a starting ZIP and we'll find the highest-need stops nearby.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="form-group">
+      <label class="form-label" for="zip">Starting ZIP Code <span>*</span></label>
+      <input
+        type="text" id="zip" class="form-input"
+        placeholder="e.g. 02118"
+        maxlength="5" inputmode="numeric"
+      >
+      <span class="form-error" id="zip-error">Please enter a valid 5-digit US ZIP code.</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="stops">Number of Stops</label>
+      <div class="stops-display">
+        <span class="stops-val" id="stops-display">5</span>
+        <span style="font-size:0.8rem; color:var(--slate-400)">stops</span>
+      </div>
+      <input type="range" id="stops" min="2" max="10" value="5" step="1">
+      <span class="form-hint">2 to 10 stops per route</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="error-box" class="error-box"></div>
+
+    <button class="btn-generate" id="generate-btn" onclick="generateRoute()">
+      <div class="spinner"></div>
+      <span class="btn-text">Generate Route →</span>
+    </button>
+
+    <p style="font-size:0.78rem; color:var(--slate-400); text-align:center; margin-top:-0.5rem;">
+      Stops are ranked by population density and health access need.
+    </p>
+  </aside>
+
+  <!-- MAIN PANEL -->
+  <main class="main-panel">
+
+    <!-- MAP -->
+    <div id="map">
+      <div class="map-placeholder" id="map-placeholder">
+        <div class="map-placeholder-icon">🗺️</div>
+        <div>Your route map will appear here</div>
+        <div style="font-size:0.8rem;">Enter a ZIP code and generate a route to get started</div>
+      </div>
+    </div>
+
+    <!-- SUMMARY BAR -->
+    <div class="summary-bar" id="summary-bar">
+      <div class="summary-stat">
+        <span class="val" id="stat-stops">—</span>
+        <span class="lbl">Stops</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <span class="val" id="stat-dist">—</span>
+        <span class="lbl">Est. Distance</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <span class="val" id="stat-pop">—</span>
+        <span class="lbl">Total Population</span>
+      </div>
+      <div class="summary-divider"></div>
+      <div class="summary-stat">
+        <span class="val" id="stat-score">—</span>
+        <span class="lbl">Avg Need Score</span>
+      </div>
+      <button class="btn-csv" onclick="downloadCSV()">⬇ Download CSV</button>
+    </div>
+
+    <!-- ROUTE TABLE -->
+    <div class="route-table-wrap" id="route-table-wrap">
+      <h3>Route Stop Details</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>ZIP Code</th>
+            <th>City / Area</th>
+            <th>Population</th>
+            <th>Need Score</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="route-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="empty-state" id="empty-state">
+      Fill in the form on the left and click <strong>Generate Route</strong> to see your optimized clinic stops.
+    </div>
+
+  </main>
+</div>
+
+<script>
+// --- SLIDER ---
+const stopsSlider = document.getElementById('stops');
+const stopsDisplay = document.getElementById('stops-display');
+stopsSlider.addEventListener('input', () => {
+  stopsDisplay.textContent = stopsSlider.value;
+});
+
+// --- STATE ---
+let mapInstance = null;
+let routeData = null;
+let markersLayer = null;
+let routeLayer = null;
+
+// --- INIT MAP ---
+function initMap(lat, lng) {
+  if (!mapInstance) {
+    document.getElementById('map-placeholder').style.display = 'none';
+    mapInstance = L.map('map').setView([lat, lng], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapInstance);
+    markersLayer = L.layerGroup().addTo(mapInstance);
+    routeLayer = L.layerGroup().addTo(mapInstance);
+  } else {
+    markersLayer.clearLayers();
+    routeLayer.clearLayers();
+    mapInstance.setView([lat, lng], 10);
+  }
+}
+
+// --- RENDER MAP ---
+function renderMap(stops) {
+  const first = stops[0];
+  initMap(first.lat, first.lng);
+
+  const latlngs = stops.map(s => [s.lat, s.lng]);
+
+  // Draw route line
+  L.polyline(latlngs, {
+    color: '#0F6E56', weight: 3, opacity: 0.7, dashArray: '6 6'
+  }).addTo(routeLayer);
+
+  // Add markers
+  stops.forEach((stop, i) => {
+    const isStart = i === 0;
+    const color = isStart ? '#0F6E56' : '#1D9E75';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:32px; height:32px; border-radius:50%;
+        background:${color}; color:white;
+        display:flex; align-items:center; justify-content:center;
+        font-size:12px; font-weight:600; font-family:'DM Sans',sans-serif;
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      ">${isStart ? 'S' : i}</div>`,
+      iconSize: [32, 32], iconAnchor: [16, 16]
+    });
+    L.marker([stop.lat, stop.lng], { icon })
+      .addTo(markersLayer)
+      .bindPopup(`<b>${stop.zip}</b><br>${stop.city}<br>Need Score: ${stop.needScore}`);
+  });
+
+  // Fit bounds
+  mapInstance.fitBounds(latlngs, { padding: [40, 40] });
+}
+
+// --- RENDER TABLE ---
+function renderTable(stops) {
+  const tbody = document.getElementById('route-tbody');
+  tbody.innerHTML = '';
+  stops.forEach((stop, i) => {
+    const isStart = i === 0;
+    const pct = Math.round(stop.needScore);
+    tbody.innerHTML += `
+      <tr>
+        <td>${i === 0 ? '—' : i}</td>
+        <td><strong>${stop.zip}</strong></td>
+        <td>${stop.city}</td>
+        <td>${stop.population.toLocaleString()}</td>
+        <td>
+          <div class="need-bar">
+            <div class="need-track">
+              <div class="need-fill" style="width:${pct}%"></div>
+            </div>
+            <span style="font-size:0.8rem;font-weight:500;color:var(--teal-600);min-width:32px">${pct}</span>
+          </div>
+        </td>
+        <td><span class="badge ${isStart ? 'badge-start' : 'badge-stop'}">${isStart ? 'Start' : 'Stop'}</span></td>
+      </tr>
+    `;
+  });
+}
+
+// --- UPDATE SUMMARY ---
+function updateSummary(stops, totalDistanceKm) {
+  const totalPop = stops.slice(1).reduce((a, s) => a + s.population, 0);
+  const avgScore = stops.slice(1).reduce((a, s) => a + s.needScore, 0) / (stops.length - 1);
+
+  // Use real ORS distance if available, else estimate via haversine
+  let distKm = totalDistanceKm;
+  if (!distKm) {
+    distKm = 0;
+    for (let i = 1; i < stops.length; i++) {
+      distKm += haversine(stops[i-1].lat, stops[i-1].lng, stops[i].lat, stops[i].lng);
+    }
+    distKm = Math.round(distKm);
+  }
+
+  document.getElementById('stat-stops').textContent = stops.length - 1;
+  document.getElementById('stat-dist').textContent = distKm + ' km';
+  document.getElementById('stat-pop').textContent = totalPop.toLocaleString();
+  document.getElementById('stat-score').textContent = avgScore.toFixed(1);
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// --- CSV DOWNLOAD ---
+function downloadCSV() {
+  if (!routeData) return;
+  const rows = [['Stop #', 'ZIP Code', 'City', 'Population', 'Need Score', 'Type', 'Latitude', 'Longitude']];
+  routeData.forEach((s, i) => {
+    rows.push([i === 0 ? 'Start' : i, s.zip, s.city, s.population, s.needScore.toFixed(1), i === 0 ? 'Start' : 'Stop', s.lat, s.lng]);
+  });
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = `routerx-${routeData[0].zip}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// --- VALIDATE ---
+function validateZip(zip) {
+  return /^\d{5}$/.test(zip.trim());
+}
+
+// --- MAIN: GENERATE ROUTE ---
+async function generateRoute() {
+  const zipInput = document.getElementById('zip');
+  const zip = zipInput.value.trim();
+  const numStops = parseInt(stopsSlider.value);
+  const btn = document.getElementById('generate-btn');
+  const errorBox = document.getElementById('error-box');
+  const zipError = document.getElementById('zip-error');
+
+  // Reset errors
+  zipInput.classList.remove('error');
+  zipError.classList.remove('visible');
+  errorBox.classList.remove('visible');
+
+  if (!validateZip(zip)) {
+    zipInput.classList.add('error');
+    zipError.classList.add('visible');
+    return;
+  }
+
+  // Loading state
+  btn.disabled = true;
+  btn.classList.add('loading');
+  document.getElementById('empty-state').style.display = 'none';
+
+  try {
+    // Call our Cloudflare Pages Function API
+    const apiRes = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zip, numStops }),
+    });
+
+    const apiData = await apiRes.json();
+
+    if (!apiRes.ok || apiData.error) {
+      throw new Error(apiData.error || 'Route generation failed. Please try again.');
+    }
+
+    // Show warning if ORS key not configured
+    if (apiData.warning) {
+      errorBox.textContent = '⚠️ ' + apiData.warning;
+      errorBox.style.background = '#FFF8E1';
+      errorBox.style.borderColor = '#FFD54F';
+      errorBox.style.color = '#7B5800';
+      errorBox.classList.add('visible');
+    }
+
+    // Render everything
+    routeData = apiData.stops;
+    renderMap(apiData.stops);
+    renderTable(apiData.stops);
+    updateSummary(apiData.stops, apiData.totalDistanceKm);
+
+    document.getElementById('summary-bar').classList.add('visible');
+    document.getElementById('route-table-wrap').classList.add('visible');
+
+  } catch (err) {
+    errorBox.textContent = err.message || 'Something went wrong. Please try again.';
+    errorBox.classList.add('visible');
+    document.getElementById('empty-state').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  }
+}
+
+// --- ZIP INPUT: digits only ---
+document.getElementById('zip').addEventListener('input', function() {
+  this.value = this.value.replace(/\D/g, '').slice(0, 5);
+});
+
+// --- ENTER KEY ---
+document.getElementById('zip').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') generateRoute();
+});
+</script>
+</body>
+</html>
